@@ -1,10 +1,34 @@
+  // Helper for health animation
+  const getHealthAnimation = (score: number) => {
+    if (score > 20) return "animate-pulse-success";
+    if (score < -20) return "animate-pulse-danger";
+    return "animate-pulse-warning";
+  };
+
+  // Helper for trend icon
+  const getTrendIcon = (trend: string, size = 16) => {
+    switch (trend) {
+      case 'improving': return <TrendingUp className={`h-${size/4} w-${size/4} text-success`} />;
+      case 'declining': return <TrendingDown className={`h-${size/4} w-${size/4} text-destructive`} />;
+      default: return <Minus className={`h-${size/4} w-${size/4} text-muted-foreground`} />;
+    }
+  };
+
+  // Helper for progress color
+  const getProgressColor = (score: number) => {
+    if (score > 0) return "bg-success";
+    if (score < 0) return "bg-destructive";
+    return "bg-muted";
+  };
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { TrendingUp, TrendingDown, Minus, RotateCcw, Target } from "lucide-react";
+import { TrendingUp, TrendingDown, Minus, RotateCcw, Target, Download } from "lucide-react";
 import { HealthMetric, Treatment } from "@/hooks/useHealthModel";
+import React, { useState } from "react";
+import { useGeminiAI } from "@/hooks/useGeminiAI";
 
 interface HealthTrajectoryModelProps {
   healthMetrics: Record<string, HealthMetric>;
@@ -25,36 +49,107 @@ export const HealthTrajectoryModel = ({
     return "warning";
   };
 
-  const getHealthAnimation = (score: number) => {
-    if (score > 20) return "animate-pulse-success";
-    if (score < -20) return "animate-pulse-danger";
-    return "animate-pulse-warning";
-  };
-
-  const getTrendIcon = (trend: string, size = 16) => {
-    switch (trend) {
-      case 'improving': return <TrendingUp className={`h-${size/4} w-${size/4} text-success`} />;
-      case 'declining': return <TrendingDown className={`h-${size/4} w-${size/4} text-destructive`} />;
-      default: return <Minus className={`h-${size/4} w-${size/4} text-muted-foreground`} />;
+  // Download handler
+  const handleDownload = () => {
+    let content = `Health Trajectory Model\n`;
+    content += `Overall Health Score: ${overallHealth}\n`;
+    content += `Status: ${overallHealth > 20 ? 'Improving' : overallHealth < -20 ? 'Declining' : 'Stable'}\n\n`;
+    content += `Metric Trajectories:\n`;
+    Object.entries(healthMetrics).forEach(([key, metric]) => {
+      content += `- ${metric.name}: Current=${metric.current}, Target=${metric.target}, Baseline=${metric.baseline}, Impact=${metric.impactScore}, Trend=${metric.trend}\n`;
+    });
+    if (appliedTreatments && appliedTreatments.length > 0) {
+      content += `\nActive Treatments:\n`;
+      appliedTreatments.forEach((t) => {
+        content += `- ${t.name} (${t.type}):\n`;
+        Object.entries(t.expectedImpact).forEach(([metric, impact]) => {
+          content += `    ${metric}: ${(typeof impact === 'number' && impact > 0 ? '+' : '') + impact}\n`;
+        });
+      });
     }
+    const blob = new Blob([content], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'health_trajectory.txt';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   };
 
-  const getProgressColor = (score: number) => {
-    if (score > 0) return "bg-success";
-    if (score < 0) return "bg-destructive";
-    return "bg-muted";
+  // Gemini AI integration
+  const { askGemini, loading, result, error } = useGeminiAI();
+  const [apiKey, setApiKey] = useState("");
+  const [showGemini, setShowGemini] = useState(false);
+
+  // Prepare a prompt from health data
+  const buildPrompt = () => {
+    let prompt = `Patient Health Summary:\n`;
+    prompt += `Overall Health Score: ${overallHealth}\n`;
+    prompt += `Metrics:\n`;
+    Object.entries(healthMetrics).forEach(([key, metric]) => {
+      prompt += `- ${metric.name}: Current=${metric.current}, Target=${metric.target}, Baseline=${metric.baseline}, Impact=${metric.impactScore}, Trend=${metric.trend}\n`;
+    });
+    if (appliedTreatments && appliedTreatments.length > 0) {
+      prompt += `\nActive Treatments:\n`;
+      appliedTreatments.forEach((t) => {
+        prompt += `- ${t.name} (${t.type}):\n`;
+        Object.entries(t.expectedImpact).forEach(([metric, impact]) => {
+          prompt += `    ${metric}: ${(typeof impact === 'number' && impact > 0 ? '+' : '') + impact}\n`;
+        });
+      });
+    }
+    prompt += `\nPlease provide a summary and any AI-driven recommendations for this patient.`;
+    return prompt;
+  };
+
+  const handleAskGemini = () => {
+    setShowGemini(true);
+    askGemini(buildPrompt(), apiKey);
   };
 
   return (
     <Card className="medical-card">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Target className="h-5 w-5 text-primary" />
-          Health Trajectory Model
-        </CardTitle>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <CardTitle className="flex items-center gap-2">
+              <Target className="h-5 w-5 text-primary" />
+              Health Trajectory Model
+            </CardTitle>
+          </div>
+          <div className="flex gap-2">
+            <Button size="icon" variant="outline" title="Download" onClick={handleDownload}>
+              <Download className="h-5 w-5" />
+            </Button>
+            <Button size="sm" variant="secondary" onClick={handleAskGemini} disabled={loading || !apiKey} title="Ask Gemini AI">
+              Ask Gemini
+            </Button>
+          </div>
+        </div>
         <CardDescription>Real-time treatment impact visualization</CardDescription>
+        {/* Gemini API Key input (for demo) */}
+        <div className="mt-2 flex gap-2 items-center">
+          <input
+            type="password"
+            placeholder="Gemini API Key"
+            value={apiKey}
+            onChange={e => setApiKey(e.target.value)}
+            className="border rounded px-2 py-1 text-xs w-48"
+            autoComplete="off"
+          />
+          <span className="text-xs text-muted-foreground">(required)</span>
+        </div>
       </CardHeader>
       <CardContent className="space-y-6">
+        {showGemini && (
+          <div className="p-3 mb-2 rounded bg-muted/50 border animate-fade-in">
+            {loading && <div className="text-xs text-muted-foreground">Gemini is thinking...</div>}
+            {error && <div className="text-xs text-destructive">{error}</div>}
+            {result && <div className="text-xs whitespace-pre-line">{result}</div>}
+          </div>
+        )}
         {/* Overall Health Score */}
         <div className="text-center space-y-3">
           <div className={`relative inline-flex items-center justify-center w-24 h-24 rounded-full border-4 

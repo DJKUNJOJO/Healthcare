@@ -1,0 +1,38 @@
+# MedTwin Pro: Feature & Page Summary
+
+## Authentication Pages
+- **Login Page:**
+  - Entry point for users.
+  - Email and password form.
+  - Link to Sign Up page.
+- **Sign Up Page:**
+  - Registration form for new users.
+  - Email, password, confirm password fields.
+  - Link to Login page.
+
+## Main Dashboard (Index Page)
+- **PatientOverview:**
+  - Displays patient details (name, age, condition, risk, etc.).
+- **AlertList:**
+  - Shows health alerts, reminders, and notifications.
+- **HealthMetrics:**
+  - Visualizes real-time health metrics (glucose, blood pressure, heart rate).
+  - Shows trends and progress.
+- **PredictiveAnalytics:**
+  - Displays risk predictions (e.g., hypoglycemic event, readmission risk).
+  - Provides recommendations based on analytics.
+- **TreatmentRecommendations:**
+  - Lists recommended treatments (medication, lifestyle, etc.).
+  - Allows user to "apply" a treatment, which updates the health model.
+- **HealthTrajectoryModel:**
+  - Visualizes the impact of applied treatments on overall health and metrics.
+  - Allows reverting treatments.
+
+## Treatment Implementation Flow
+- Applying a treatment updates health metrics and overall health score.
+- Visualizations and analytics update to reflect the new state.
+- Alerts and recommendations may change based on the new health data.
+
+---
+
+This file summarizes the app’s main features and how treatment actions affect the dashboard. Users can refer to this file for a quick overview without logging in.
