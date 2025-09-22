@@ -216,13 +216,34 @@ export const HealthMetrics = ({ expanded = false, healthMetrics }: HealthMetrics
                             fontSize: '12px'
                           }}
                         />
-                        <Area
-                          type="monotone"
-                          dataKey="value"
-                          stroke="hsl(var(--primary))"
-                          strokeWidth={2}
-                          fill={`url(#gradient-${index})`}
-                        />
+                        {metric.name === 'Blood Pressure' ? (
+                          <>
+                            <Area
+                              type="monotone"
+                              dataKey="systolic"
+                              stroke="#2563eb"
+                              strokeWidth={2}
+                              fillOpacity={0}
+                              name="Systolic"
+                            />
+                            <Area
+                              type="monotone"
+                              dataKey="diastolic"
+                              stroke="#f59e42"
+                              strokeWidth={2}
+                              fillOpacity={0}
+                              name="Diastolic"
+                            />
+                          </>
+                        ) : (
+                          <Area
+                            type="monotone"
+                            dataKey="value"
+                            stroke="hsl(var(--primary))"
+                            strokeWidth={2}
+                            fill={`url(#gradient-${index})`}
+                          />
+                        )}
                       </AreaChart>
                     </ResponsiveContainer>
                   </div>
